@@ -1,10 +1,10 @@
-const gameCanvas = document.querySelector("#gameCanvas");
+const gameCanvas = document.getElementById("gameCanvas");
 const gameCanvasColor = "#282828";
 
 const context = gameCanvas.getContext("2d");
 
-const scoreText = document.querySelector("#scoreText");
-const resetButton = document.querySelector("#resetButton");
+const scoreText = document.getElementById("scoreText");
+const resetButton = document.getElementById("resetButton");
 
 const tileSize = 25;
 
@@ -18,39 +18,31 @@ let score = 0;
 // input
 window.addEventListener("keydown", input);
 
-class Vector2 {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-  }
-}
+// input queue
+let inputQueue = []
 
-let applePosition = new Vector2(0, 0);
+let applePosition = {x: 0, y: 0};
 
 let snakePositions = [
-  new Vector2(
-    (gameCanvas.width / tileSize / 2) * tileSize,
-    (gameCanvas.height / tileSize / 2) * tileSize,
-  ),
+    {x: (gameCanvas.width / tileSize / 2) * tileSize,
+     y: (gameCanvas.height / tileSize / 2) * tileSize}
 ];
 let snakeDirection = "none";
 
 function resetApple() {
   let x =
-    Math.round(Math.random() * (gameCanvas.width / tileSize) - 1) * tileSize;
+    Math.floor(Math.random() * (gameCanvas.width / tileSize)) * tileSize;
   let y =
-    Math.round(Math.random() * (gameCanvas.height / tileSize) - 1) * tileSize;
-
+    Math.floor(Math.random() * (gameCanvas.height / tileSize)) * tileSize;
+    
   for (let i = 0; i < snakePositions.length - 1; i++) {
     if (x == snakePositions[i].x && y == snakePositions[i].y) {
       resetApple();
     }
   }
 
-  applePosition.x =
-    Math.round(Math.random() * (gameCanvas.width / tileSize)) * tileSize;
-  applePosition.y =
-    Math.round(Math.random() * (gameCanvas.height / tileSize)) * tileSize;
+  applePosition.x = x;
+  applePosition.y = y;
 }
 
 function drawApple() {
@@ -60,47 +52,41 @@ function drawApple() {
 
 function resetSnake() {
   snakePositions = [
-    new Vector2(
-      (gameCanvas.width / tileSize / 2) * tileSize,
-      (gameCanvas.height / tileSize / 2) * tileSize,
-    ),
+    {x: (gameCanvas.width / tileSize / 2) * tileSize,
+     y: (gameCanvas.height / tileSize / 2) * tileSize}
   ];
 
   snakeDirection = "none";
 }
 
 function addSnakePeice() {
-  snakePositions.push(new Vector2(snakePositions[0].x, snakePositions[0].y));
+  snakePositions.push({x: snakePositions[0].x, y: snakePositions[0].y});
 }
 
 function input(event) {
-  if (event.keyCode == 32) {
-    resetGame();
-  }
-
   switch (event.keyCode) {
     case 38:
     case 87:
       if (snakeDirection != "down") {
-        snakeDirection = "up";
+        inputQueue.push("up");
       }
       break;
     case 40:
     case 83:
       if (snakeDirection != "up") {
-        snakeDirection = "down";
+        inputQueue.push("down");
       }
       break;
     case 37:
     case 65:
       if (snakeDirection != "right") {
-        snakeDirection = "left";
+        inputQueue.push("left");
       }
       break;
     case 39:
     case 68:
       if (snakeDirection != "left") {
-        snakeDirection = "right";
+        inputQueue.push("right");
       }
       break;
   }
@@ -127,22 +113,30 @@ function updateSnake() {
       break;
   }
 
-  // head positions (switch to vec2)
-  const headX = snakePositions[0].x;
-  const headY = snakePositions[0].y;
+  if (inputQueue[0]) {
+    snakeDirection = inputQueue[0];
 
+    inputQueue.pop(0);
+    for (let i = inputQueue.length - 1; i > 0; i--) {
+      inputQueue[i] = inputQueue[i - 1];
+    }
+  }
+
+  // head positions (switch to vec2)
+  const head = {x: snakePositions[0].x, y: snakePositions[0].y};
+  
   // bounds check
   if (
-    headX < 0 ||
-    headX >= gameCanvas.width ||
-    headY < 0 ||
-    headY >= gameCanvas.height
+    head.x < 0 ||
+    head.x >= gameCanvas.width ||
+    head.y < 0 ||
+    head.y >= gameCanvas.height
   ) {
     gameOver = true;
   }
 
   // apple check
-  if (headX == applePosition.x && headY == applePosition.y) {
+  if (head.x == applePosition.x && head.y == applePosition.y) {
     addSnakePeice();
     resetApple();
 
@@ -153,7 +147,7 @@ function updateSnake() {
   // body check
   if (snakePositions.length > 1) {
     for (let i = 1; i < snakePositions.length - 1; i++) {
-      if (headX == snakePositions[i].x && headY == snakePositions[i].y) {
+      if (head.x == snakePositions[i].x && head.y == snakePositions[i].y) {
         gameOver = true;
       }
     }
